@@ -39,3 +39,75 @@
   border-radius: 5px;
   cursor: pointer;
 }
+
+/* Styles.module.css */
+
+.measurementField {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px; /* space between measurement fields */
+}
+
+.formElement {
+  margin-right: 8px; /* space between select and input within a measurement field */
+  border: 1px solid #ccc; /* consistent border */
+  padding: 8px; /* consistent padding */
+  border-radius: 4px; /* slightly rounded corners */
+  margin-bottom: 10px; /* space below each field */
+}
+
+.fileInput {
+  border: none; /* you may want to remove border for file inputs */
+  background-color: #f0f0f0; /* different background to distinguish from other inputs */
+}
+
+.textarea {
+  width: 100%; /* full width */
+  resize: vertical; /* only allow vertical resizing */
+}
+
+.deleteButton {
+  background-color: #ff4d4d;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0; /* Padding removed since the SVG size is controlled separately */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; /* Fixed width */
+  height: 20px; /* Fixed height */
+}
+
+
+.deleteButton:hover {
+  background-color: #ff6666; /* lighter red on hover */
+}
+
+.submit:hover {
+  background-color: #45a049; /* Darker shade for hover effect */
+}
+
+.formButton {
+  background-color: #4CAF50; /* example button color */
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  transition-duration: 0.4s;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.formButton:hover {
+  background-color: #45a049; /* Darker shade for hover effect */
+}
+
+.hidden {
+  display: none;
+}

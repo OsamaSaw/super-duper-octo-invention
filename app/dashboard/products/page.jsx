@@ -5,6 +5,7 @@ import Search from "@/app/ui/dashboard/search/search";
 import Pagination from "@/app/ui/dashboard/pagination/pagination";
 import { fetchProducts } from "@/app/lib/data";
 import { deleteProduct } from "@/app/lib/actions";
+import Modal from './deleteConfirm'; // Adjust the import path as needed
 
 const ProductsPage = async ({ searchParams }) => {
   const q = searchParams?.q || "";
@@ -25,7 +26,7 @@ const ProductsPage = async ({ searchParams }) => {
             <td>Title</td>
             <td>Description</td>
             <td>Price</td>
-            <td>Created At</td>
+            <td>Up coming expiry</td>
             <td>Stock</td>
             <td>Action</td>
           </tr>
