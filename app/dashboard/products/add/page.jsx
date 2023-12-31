@@ -1,21 +1,21 @@
-"use client"
+"use client";
 import { addProduct } from "@/app/lib/actions";
 import styles from "@/app/ui/dashboard/products/addProduct/addProduct.module.css";
-import {useState} from "react";
-import Select from 'react-select';
-import {revalidatePath} from "next/cache";
-import {redirect} from "next/navigation";
+import { useState } from "react";
+import Select from "react-select";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { selectTheme, selectStyle } from "./../../../../utils/selectStyles";
 
 // This could also be fetched from a database and set in state
 const measurementTypes = [
-  { label: "Select Measurement Type", value: "" },
   { label: "Pieces", value: "pieces" },
   { label: "Kilos", value: "kilos" },
   { label: "Boxes", value: "boxes" },
 ];
 
 const categoryOptions = [
-  { label: "Choose a Category", value: "general" },
+  { label: "Choose a Category", value: "" },
   { label: "Kitchen", value: "kitchen" },
   { label: "Phone", value: "phone" },
   { label: "Computer", value: "computer" },
@@ -30,20 +30,33 @@ const supplierList = [
 ];
 
 const AddProductPage = () => {
-
-  const [measurements, setMeasurements] = useState([{ type: '', quantity: '' }]);
+  const [measurements, setMeasurements] = useState([
+    { type: "Select Measurement Type", quantity: "" },
+  ]);
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
-  const supplierOptions = supplierList.filter(option => option.value !== "").map(supplier => ({
-    label: supplier.label,
-    value: supplier.value,
-  }));
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [image, setImage] = useState(null);
+  const supplierOptions = supplierList
+    .filter((option) => option.value !== "")
+    .map((supplier) => ({
+      label: supplier.label,
+      value: supplier.value,
+    }));
   const handleSupplierChange = (selectedOptions) => {
     // selectedOptions will be an array of { label, value } objects
     setSelectedSuppliers(selectedOptions || []);
   };
+  const handleCategoryChange = (selectedOptions) => {
+    // selectedOptions will be an array of { label, value } objects
+    setSelectedCategory(selectedOptions || "");
+  };
   const getAvailableMeasurementTypes = (currentIndex) => {
-    const selectedTypes = measurements.map((m, index) => index === currentIndex ? null : m.type).filter(t => t);
-    return measurementTypes.filter(type => type.value === "" || !selectedTypes.includes(type.value));
+    const selectedTypes = measurements
+      .map((m, index) => (index === currentIndex ? null : m.type))
+      .filter((t) => t);
+    return measurementTypes.filter(
+      (type) => type.value === "" || !selectedTypes.includes(type.value)
+    );
   };
   const handleMeasurementChange = (index, field, value) => {
     const newMeasurements = [...measurements];
@@ -51,17 +64,24 @@ const AddProductPage = () => {
     setMeasurements(newMeasurements);
   };
   const isAddMoreButtonVisible = () => {
-    return measurements.length < measurementTypes.length - 1;
+    return measurements.length < measurementTypes.length;
   };
   const deleteMeasurement = (index) => {
     const newMeasurements = measurements.filter((_, i) => i !== index);
     setMeasurements(newMeasurements);
   };
   const addMeasurement = () => {
-    if (measurements.length < measurementTypes.length - 1) {
-      setMeasurements([...measurements, { type: '', quantity: '' }]);
+    if (measurements.length < measurementTypes.length) {
+      setMeasurements([...measurements, { type: "", quantity: "" }]);
     }
   };
+  const onImageChange = (event) => {
+    if (event.target.files && event.target.files[0]) {
+      setImage(URL.createObjectURL(event.target.files[0]));
+    }
+  };
+  const inputTheme = "h-10 bg-[#2E374A] rounded-md placeholder:text-white";
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -73,93 +93,145 @@ const AddProductPage = () => {
       formData.append(`measurements[${index}][quantity]`, measurement.quantity);
     });
 
-    const status = await addProduct(formData)
-    if (status.status){
+    const status = await addProduct(formData);
+    if (status.status) {
       // revalidatePath("/dashboard/products");
       redirect("/dashboard/products");
-    }
-    else {
-      console.log("Something went wrong try again later")
+    } else {
+      console.log("Something went wrong try again later");
     }
   };
+
   return (
     <div className={styles.container}>
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <input type="text" placeholder="title" name="title" required />
-        <input type="file" name="productImage" accept="image/*" />
-
-        <select name="cat" id="cat" className={styles.formElement}>
-          {categoryOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-          ))}
-        </select>
-
-        <Select
-            name="suppliers"
-            className={styles.formElement} // Apply your styling
-            options={supplierOptions}
-            isMulti
-            onChange={handleSupplierChange}
-            value={selectedSuppliers}
-            placeholder="Select suppliers"
-        />
-
-        {measurements.map((measurement, index) => (
-            <div key={index} className={styles.measurementField}>
-              {/* Measurement Type Dropdown */}
-              <select
-                  className={styles.formElement} // Apply styles to select
-                  value={measurement.type}
-                  onChange={(e) => handleMeasurementChange(index, 'type', e.target.value)}
-                  required
-              >
-                {getAvailableMeasurementTypes(index).map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-
-              {/* Quantity Input */}
+      <form onSubmit={handleSubmit}>
+        <div className="flex flex-row w-full">
+          {/* image and des */}
+          <div className="w-[50%] flex flex-col items-center">
+            <div className="flex flex-col items-center relative">
+              <img
+                className="w-1/2 rounded-md"
+                alt="preview image"
+                src={image || "/imagePlaceholder.jpg"}
+              />
               <input
+                type="file"
+                onChange={onImageChange}
+                name="productImage"
+                accept="image/*"
+                className="absolute bottom-0 justify-items-center text-black"
+              />
+            </div>
+            <textarea
+              className={`w-full rounded-md mt-5 h-24 ${inputTheme}`}
+              required
+              name="desc"
+              id="desc"
+              rows="4"
+              placeholder=" Description"
+            ></textarea>
+          </div>
+          {/* the rest */}
+          <div className="flex flex-col w-[50%]">
+            <div className="flex items-center justify-between">
+              <input
+                className={`w-[46%] ${inputTheme}`}
+                type="text"
+                placeholder=" Title"
+                name="title"
+                required
+              />
+              <Select
+                theme={selectTheme}
+                styles={selectStyle}
+                name="cat"
+                id="cat"
+                className={`${styles.formElement} w-[46%]`} // Apply your styling
+                options={categoryOptions}
+                onChange={handleCategoryChange}
+                value={selectedCategory}
+                placeholder="Select Category"
+              />
+            </div>
+
+            <Select
+              name="suppliers"
+              theme={selectTheme}
+              styles={selectStyle}
+              className={styles.formElement} // Apply your styling
+              options={supplierOptions}
+              isMulti
+              onChange={handleSupplierChange}
+              value={selectedSuppliers}
+              placeholder="Select suppliers"
+            />
+            {measurements.map((measurement, index) => (
+              <div key={index} className={styles.measurementField}>
+                {/* Measurement Type Dropdown */}
+                <Select
+                  theme={selectTheme}
+                  styles={selectStyle}
+                  className="w-1/2 mr-5"
+                  value={{ label: measurement.type, value: measurement.type }}
+                  options={getAvailableMeasurementTypes(index).map((type) => ({
+                    label: type.label,
+                    value: type.value,
+                  }))}
+                  onChange={(selectedOption) =>
+                    handleMeasurementChange(index, "type", selectedOption.value)
+                  }
+                  required
+                />
+
+                {/* Quantity Input */}
+                <input
                   className={styles.formElement} // Apply styles to input
                   type="number"
                   value={measurement.quantity}
-                  onChange={(e) => handleMeasurementChange(index, 'quantity', e.target.value)}
+                  onChange={(e) =>
+                    handleMeasurementChange(index, "quantity", e.target.value)
+                  }
                   placeholder="Quantity"
+                  inputMode="numeric"
                   required
-              />
+                />
 
-              {/* Delete Button (not for the first measurement) */}
-              {index > 0 && (
-                  <button type="button" onClick={() => deleteMeasurement(index)} className={styles.deleteButton}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                {/* Delete Button (not for the first measurement) */}
+                {index > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => deleteMeasurement(index)}
+                    className={`${styles.deleteButton} ml-5 `}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                    >
                       {/* SVG path for an X icon */}
-                      <path d="M18.3,5.71,12,12l6.3,6.29a1,1,0,0,1,0,1.41,1,1,0,0,1-1.41,0L12,14.41l-6.29,6.3a1,1,0,0,1-1.41-1.41L10.59,12,4.3,5.71A1,1,0,0,1,5.71,4.3L12,10.59l6.29-6.3a1,1,0,0,1,1.41,1.41Z"/>
+                      <path d="M18.3,5.71,12,12l6.3,6.29a1,1,0,0,1,0,1.41,1,1,0,0,1-1.41,0L12,14.41l-6.29,6.3a1,1,0,0,1-1.41-1.41L10.59,12,4.3,5.71A1,1,0,0,1,5.71,4.3L12,10.59l6.29-6.3a1,1,0,0,1,1.41,1.41Z" />
                     </svg>
                   </button>
-              )}
-            </div>
-        ))}
+                )}
+              </div>
+            ))}
 
-        {/* Add More Measurements Button */}
-        <button
-            type="button"
-            onClick={addMeasurement}
-            className={`${styles.formButton} ${!isAddMoreButtonVisible() && styles.hidden}`} // Apply styles and conditional hiding
-        >
-          Add More Measurements
+            {/* Add More Measurements Button */}
+            <button
+              type="button"
+              onClick={addMeasurement}
+              className={`${styles.formButton} ${
+                !isAddMoreButtonVisible() && styles.hidden
+              }`} // Apply styles and conditional hiding
+            >
+              Add More Measurements
+            </button>
+          </div>
+        </div>
+        <button className={`${styles.formButton} w-full`} type="submit">
+          Submit
         </button>
-
-
-        <textarea
-          required
-          name="desc"
-          id="desc"
-          rows="4"
-          placeholder="Description"
-        ></textarea>
-        <button className={styles.submit} type="submit">Submit</button>
       </form>
     </div>
   );

@@ -49,11 +49,12 @@
 }
 
 .formElement {
-  margin-right: 8px; /* space between select and input within a measurement field */
-  border: 1px solid #ccc; /* consistent border */
-  padding: 8px; /* consistent padding */
   border-radius: 4px; /* slightly rounded corners */
   margin-bottom: 10px; /* space below each field */
+  color: black;
+  height: 40px;
+  margin-top:5px;
+  margin-bottom: 5px;
 }
 
 .fileInput {
