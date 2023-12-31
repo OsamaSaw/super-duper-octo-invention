@@ -4,8 +4,8 @@ import styles from "@/app/ui/dashboard/products/addProduct/addProduct.module.css
 import { useState } from "react";
 import Select from "react-select";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { selectTheme, selectStyle } from "./../../../../utils/selectStyles";
+import { useRouter } from "next/navigation";
 
 // This could also be fetched from a database and set in state
 const measurementTypes = [
@@ -42,6 +42,8 @@ const AddProductPage = () => {
       label: supplier.label,
       value: supplier.value,
     }));
+
+  const router = useRouter();
   const handleSupplierChange = (selectedOptions) => {
     // selectedOptions will be an array of { label, value } objects
     setSelectedSuppliers(selectedOptions || []);
@@ -85,21 +87,21 @@ const AddProductPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const formData = new FormData(event.target);
-
-    // Manually append each measurement to the FormData
+    // revalidatePath("/dashboard/products");
+    // console.log(Object.fromEntries(formData.entries()));
+    let measures = [];
     measurements.forEach((measurement, index) => {
-      formData.append(`measurements[${index}][type]`, measurement.type);
-      formData.append(`measurements[${index}][quantity]`, measurement.quantity);
+      measures.push({
+        quantity: measurement.quantity,
+        type: measurement.type,
+      });
     });
-
-    const status = await addProduct(formData);
-    if (status.status) {
-      // revalidatePath("/dashboard/products");
-      redirect("/dashboard/products");
-    } else {
-      console.log("Something went wrong try again later");
-    }
+    console.log("Form Title:", event.target.title.value);
+    console.log("Category:", event.target.cat.value);
+    console.log("Suppliers:", selectedSuppliers);
+    console.log("Description:", event.target.desc.value);
+    console.log("Image:", image);
+    router.push("/dashboard/products");
   };
 
   return (
@@ -108,9 +110,9 @@ const AddProductPage = () => {
         <div className="flex flex-row w-full">
           {/* image and des */}
           <div className="w-[50%] flex flex-col items-center">
-            <div className="flex flex-col items-center relative">
+            <div className="flex flex-col w-[70%] items-center relative mb-5">
               <img
-                className="w-1/2 rounded-md"
+                className="w-full rounded-md"
                 alt="preview image"
                 src={image || "/imagePlaceholder.jpg"}
               />
@@ -119,7 +121,7 @@ const AddProductPage = () => {
                 onChange={onImageChange}
                 name="productImage"
                 accept="image/*"
-                className="absolute bottom-0 justify-items-center text-black"
+                className="absolute -bottom-8 left-0 justify-items-center text-black"
               />
             </div>
             <textarea
@@ -132,7 +134,7 @@ const AddProductPage = () => {
             ></textarea>
           </div>
           {/* the rest */}
-          <div className="flex flex-col w-[50%]">
+          <div className="flex flex-col w-[50%] space-y-5">
             <div className="flex items-center justify-between">
               <input
                 className={`w-[46%] ${inputTheme}`}
