@@ -112,3 +112,10 @@
 .hidden {
   display: none;
 }
+.custom-datepicker {
+  width: 100%;
+}
+
+.custom-datepicker input {
+  width: 100%;
+}

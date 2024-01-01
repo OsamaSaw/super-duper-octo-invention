@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Product, User } from "./models";
+import {Category, DeliveryMethod, Order, Product, Stock, Supplier, User} from "./models";
 import {connectToDB, logError} from "./utils";
 import { redirect } from "next/navigation";
 import bcrypt from "bcrypt";
@@ -180,6 +180,187 @@ export const deleteProduct = async (formData) => {
 
   revalidatePath("/dashboard/products");
 };
+export const addSupplier = async (formData) => {
+  try {
+    connectToDB();
+
+    const productsDelivered = formData.getAll('productsDelivered');
+    console.log(productsDelivered)
+    productsDelivered.forEach(data => {
+      console.log(data);
+    });
+
+    const newCategory = new Supplier({
+      name: formData.get('name'),
+      phoneNumber: formData.get('phoneNumber'),
+      desc: formData.get('desc'),
+      productsDelivered: productsDelivered
+    });
+    console.log(newCategory)
+    // await newCategory.save();
+
+    return {status:true, msg:"success"}
+  } catch (err) {
+    await logError(err);
+    return {status:false, msg:err}
+    // throw new Error("Failed to create product!");
+  }
+};
+export const deleteSupplier = async (formData) => {
+  const { id } = Object.fromEntries(formData);
+
+  try {
+    connectToDB();
+    await Supplier.findByIdAndDelete(id);
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to delete Supplier!");
+  }
+
+  revalidatePath("/dashboard/suppliers");
+};
+export const deleteStock = async (formData) => {
+  const { id } = Object.fromEntries(formData);
+
+  try {
+    connectToDB();
+    await Stock.findByIdAndDelete(id);
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to delete stock!");
+  }
+
+  revalidatePath("/dashboard/stocks");
+};
+
+export const addCategory = async (formData) => {
+  try {
+    connectToDB();
+
+    const newCategory = new Category({
+      name: formData.get('name'),
+      desc: formData.get('desc'),
+    });
+
+    await newCategory.save();
+
+    return {status:true, msg:"success"}
+  } catch (err) {
+    await logError(err);
+    return {status:false, msg:err}
+    // throw new Error("Failed to create product!");
+  }
+};
+export const updateCategory = async (formData) => {
+  const { id, name, desc } =
+      Object.fromEntries(formData);
+  try {
+    connectToDB();
+    const updateFields = {
+      name,
+      desc,
+    };
+
+    Object.keys(updateFields).forEach(
+        (key) =>
+            (updateFields[key] === "" || undefined) && delete updateFields[key]
+    );
+
+    await Category.findByIdAndUpdate(id, updateFields);
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to update product!");
+  }
+
+  revalidatePath("/dashboard/categories");
+  redirect("/dashboard/categories");
+};
+
+export const deleteCategory = async (formData) => {
+  const { id } = Object.fromEntries(formData);
+
+  try {
+    connectToDB();
+    await Category.findByIdAndDelete(id);
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to delete product!");
+  }
+
+  revalidatePath("/dashboard/categories");
+};
+export const addDeliveryMethod = async (formData) => {
+  try {
+    connectToDB();
+
+    const newDeliveryMethod = new DeliveryMethod({
+      name: formData.get('name'),
+      desc: formData.get('desc'),
+    });
+
+    await newDeliveryMethod.save();
+    revalidatePath("/dashboard/categories");
+    return {status:true, msg:"success"}
+
+  } catch (err) {
+    await logError(err);
+    return {status:false, msg:err}
+    // throw new Error("Failed to create product!");
+  }
+};
+
+export const updateDeliveryMethod = async (formData) => {
+  const { id, name, desc } =
+      Object.fromEntries(formData);
+  try {
+    connectToDB();
+    const updateFields = {
+      name,
+      desc,
+    };
+
+    Object.keys(updateFields).forEach(
+        (key) =>
+            (updateFields[key] === "" || undefined) && delete updateFields[key]
+    );
+
+    await DeliveryMethod.findByIdAndUpdate(id, updateFields);
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to update DeliveryMethod!");
+  }
+
+  revalidatePath("/dashboard/deliverymethods");
+  redirect("/dashboard/deliverymethods");
+};
+export const deleteDeliveryMethod = async (formData) => {
+  const { id } = Object.fromEntries(formData);
+
+  try {
+    connectToDB();
+    await DeliveryMethod.findByIdAndDelete(id);
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to delete DeliveryMethod!");
+  }
+
+  revalidatePath("/dashboard/DeliveryMethods");
+};
+
+export const deleteOrder = async (formData) => {
+  const { id } = Object.fromEntries(formData);
+
+  try {
+    connectToDB();
+    await Order.findByIdAndDelete(id);
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to delete Order!");
+  }
+
+  revalidatePath("/dashboard/orders");
+};
+
 export const authenticate = async (prevState, formData) => {
   const { username, password } = Object.fromEntries(formData);
 
