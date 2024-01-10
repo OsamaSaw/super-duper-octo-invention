@@ -1,7 +1,7 @@
 "use client";
-import { addProduct } from "@/app/lib/actions";
+import {addProduct, fetchProductsList} from "@/app/lib/actions";
 import styles from "@/app/ui/dashboard/products/addProduct/addProduct.module.css";
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import Select from "react-select";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -36,6 +36,17 @@ const AddOrderPage = () => {
   );
   const [selectedProduct, setSelectedProduct] = useState([]);
   const [selectedDestination, setSelectedDestination] = useState(null);
+  const [productsListNew, setProductsListNew] = useState([]);
+
+  useEffect(() => {
+    // Fetch products when the component mounts
+    const getProducts = async () => {
+      const products = await fetchProductsList();
+      // Transform products to the format needed for the Select component
+      setProductsListNew(products);
+    };
+    getProducts()
+  }, []);
 
   const ProductsOptions = ProductsTypes
     .filter((option) => option.value !== "")

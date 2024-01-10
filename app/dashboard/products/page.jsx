@@ -3,15 +3,15 @@ import Link from "next/link";
 import styles from "@/app/ui/dashboard/products/products.module.css";
 import Search from "@/app/ui/dashboard/search/search";
 import Pagination from "@/app/ui/dashboard/pagination/pagination";
-import { fetchProducts } from "@/app/lib/data";
+import {fetchProducts, fetchProductsWithStocks} from "@/app/lib/data";
 import { deleteProduct } from "@/app/lib/actions";
 import Modal from './deleteConfirm'; // Adjust the import path as needed
 
 const ProductsPage = async ({ searchParams }) => {
   const q = searchParams?.q || "";
   const page = searchParams?.page || 1;
-  const { count, products } = await fetchProducts(q, page);
-
+  const { count, products } = await fetchProductsWithStocks(q, page);
+  // console.log(products)
   return (
     <div className={styles.container}>
       <div className={styles.top}>
@@ -24,7 +24,7 @@ const ProductsPage = async ({ searchParams }) => {
         <thead>
           <tr>
             <td>Title</td>
-            <td>Description</td>
+            <td>Supplier</td>
             <td>Price</td>
             <td>Up coming expiry</td>
             <td>Stock</td>
@@ -46,10 +46,20 @@ const ProductsPage = async ({ searchParams }) => {
                   {product.title}
                 </div>
               </td>
-              <td>{product.desc}</td>
-              <td>${product.price}</td>
-              <td>{product.createdAt?.toString().slice(4, 16)}</td>
-              <td>{product.stock}</td>
+              <td>
+                {product.suppliers && product.suppliers.length > 0
+                    ? product.suppliers.map(supplier => supplier.name).join(', ')
+                    : 'No supplier available'
+                }
+              </td>
+              <td>${product.totalPrice}</td>
+              <td>
+                {product.nextExpiryDate
+                    ? new Date(product.nextExpiryDate).toLocaleDateString('en-GB') // 'en-GB' uses the day-month-year format
+                    : 'No expiry date'
+                }
+              </td>
+              <td>{product.totalStock}</td>
               <td>
                 <div className={styles.buttons}>
                   <Link href={`/dashboard/products/${product.id}`}>
@@ -59,6 +69,7 @@ const ProductsPage = async ({ searchParams }) => {
                   </Link>
                   <form action={deleteProduct}>
                     <input type="hidden" name="id" value={product.id} />
+                    <input type="hidden" name="img" value={product.img} />
                     <button className={`${styles.button} ${styles.delete}`}>
                       Delete
                     </button>
@@ -75,3 +86,7 @@ const ProductsPage = async ({ searchParams }) => {
 };
 
 export default ProductsPage;
+// 6251919000788
+// input tile , volume,
+// input barcode, input qu, input price +
+// input barcode, input qu, input price +

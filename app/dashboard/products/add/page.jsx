@@ -31,11 +31,12 @@ const supplierList = [
 
 const AddProductPage = () => {
   const [measurements, setMeasurements] = useState([
-    { type: "Select Measurement Type", quantity: "" },
+    { type: "Select Measurement Type", quantity: "", barCode:"" },
   ]);
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [image, setImage] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const supplierOptions = supplierList
     .filter((option) => option.value !== "")
     .map((supplier) => ({
@@ -79,7 +80,8 @@ const AddProductPage = () => {
   };
   const onImageChange = (event) => {
     if (event.target.files && event.target.files[0]) {
-      setImage(URL.createObjectURL(event.target.files[0]));
+      setSelectedFile(event.target.files[0]); // Store the file object
+      setImage(URL.createObjectURL(event.target.files[0])); // For preview purposes
     }
   };
   const inputTheme = "h-10 bg-[#2E374A] rounded-md placeholder:text-white";
@@ -87,20 +89,31 @@ const AddProductPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // revalidatePath("/dashboard/products");
-    // console.log(Object.fromEntries(formData.entries()));
     let measures = [];
+    let suppliers = []
     measurements.forEach((measurement, index) => {
       measures.push({
         quantity: measurement.quantity,
         type: measurement.type,
+        barCode:measurement.barCode
       });
     });
-    console.log("Form Title:", event.target.title.value);
-    console.log("Category:", event.target.cat.value);
-    console.log("Suppliers:", selectedSuppliers);
-    console.log("Description:", event.target.desc.value);
-    console.log("Image:", image);
+    selectedSuppliers.forEach((supplier, index) => {
+      suppliers.push(supplier.value);
+      if (Array.isArray(supplier)) {
+        suppliers.push(...supplier);
+      }
+    });
+    const formData = new FormData();
+    formData.append('title', event.target.title.value);
+    formData.append('category', event.target.cat.value);
+    formData.append('desc', event.target.desc.value);
+    formData.append('image', selectedFile);  // Assuming 'image' is a File object
+    formData.append('measurements', JSON.stringify(measures));
+    formData.append('suppliers', JSON.stringify(suppliers));
+    // console.log(JSON.stringify(measures))
+    const status = await addProduct(formData)
+    console.log(status)
     router.push("/dashboard/products");
   };
 
@@ -126,7 +139,6 @@ const AddProductPage = () => {
             </div>
             <textarea
               className={`w-full rounded-md mt-5 h-24 ${inputTheme}`}
-              required
               name="desc"
               id="desc"
               rows="4"
@@ -137,9 +149,9 @@ const AddProductPage = () => {
           <div className="flex flex-col w-[50%] space-y-5">
             <div className="flex items-center justify-between">
               <input
-                className={`w-[46%] ${inputTheme}`}
+                className={`w-[46%] ${inputTheme} pl-2`}
                 type="text"
-                placeholder=" Title"
+                placeholder="Title"
                 name="title"
                 required
               />
@@ -168,12 +180,12 @@ const AddProductPage = () => {
               placeholder="Select suppliers"
             />
             {measurements.map((measurement, index) => (
-              <div key={index} className={styles.measurementField}>
+              <div key={index} className={`${styles.measurementField} space-x-5`}>
                 {/* Measurement Type Dropdown */}
                 <Select
                   theme={selectTheme}
                   styles={selectStyle}
-                  className="w-1/2 mr-5"
+                  className="w-1/2"
                   value={{ label: measurement.type, value: measurement.type }}
                   options={getAvailableMeasurementTypes(index).map((type) => ({
                     label: type.label,
@@ -187,7 +199,7 @@ const AddProductPage = () => {
 
                 {/* Quantity Input */}
                 <input
-                  className={styles.formElement} // Apply styles to input
+                  className={`${styles.formElement} ${inputTheme} pl-2`} // Apply styles to input
                   type="number"
                   value={measurement.quantity}
                   onChange={(e) =>
@@ -197,7 +209,16 @@ const AddProductPage = () => {
                   inputMode="numeric"
                   required
                 />
-
+                <input
+                    className={`${styles.formElement} ${inputTheme} pl-2`} // Apply styles to input
+                    type="text"
+                    value={measurement.barCode}
+                    onChange={(e) =>
+                        handleMeasurementChange(index, "barCode", e.target.value)
+                    }
+                    placeholder="Barcode"
+                    required
+                />
                 {/* Delete Button (not for the first measurement) */}
                 {index > 0 && (
                   <button

@@ -1,10 +1,11 @@
 "use client";
-import {addDeliveryMethod, addSupplier} from "@/app/lib/actions";
+import {addDeliveryMethod, addSupplier, fetchProductsList} from "@/app/lib/actions";
 import styles from "@/app/ui/dashboard/products/addProduct/addProduct.module.css";
 import {useRouter} from "next/navigation";
 import Select from "react-select";
 import {selectStyle, selectTheme} from "@/utils/selectStyles";
-import {useState} from "react";
+import { useEffect, useState } from "react";
+// import {fetchProductsList} from "@/app/lib/data";
 
 
 const productsList = [
@@ -18,12 +19,17 @@ const AddDeliveryMethodPage = () => {
   const router = useRouter();
   const inputTheme = "h-10 bg-[#2E374A] rounded-md placeholder:text-white";
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const productsOptions = productsList
-      .filter((option) => option.value !== "")
-      .map((supplier) => ({
-        label: supplier.label,
-        value: supplier.value,
-      }));
+  const [productsListNew, setProductsListNew] = useState([]);
+
+  useEffect(() => {
+    // Fetch products when the component mounts
+    const getProducts = async () => {
+      const products = await fetchProductsList();
+      // Transform products to the format needed for the Select component
+      setProductsListNew(products);
+    };
+     getProducts()
+  }, []);
 
   const handleProcutsChange = (selectedOptions) => {
     // selectedOptions will be an array of { label, value } objects
@@ -39,7 +45,7 @@ const AddDeliveryMethodPage = () => {
     const status = await addSupplier(formData);
     console.log(status)
     if (status.status) {
-      // router.push('/dashboard/suppliers');
+      router.push('/dashboard/suppliers');
       console.log("success")
     } else {
       console.log("Something went wrong try again later");
@@ -69,7 +75,7 @@ const AddDeliveryMethodPage = () => {
                 theme={selectTheme}
                 styles={selectStyle}
                 className={`w-[100%] ${styles.formElement}`}
-                options={productsOptions}
+                options={productsListNew}
                 isMulti
                 onChange={handleProcutsChange}
                 value={selectedProducts}

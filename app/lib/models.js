@@ -8,6 +8,69 @@ const measurementSchema = new mongoose.Schema({
     quantity: Number
 }, { _id: false }); // Disable auto-generation of `_id` for each measurement
 
+// const productSchema = new mongoose.Schema({
+//     title: {
+//         type: String,
+//         required: true,
+//         unique: true,
+//     },
+//     category: {
+//         type: String,
+//         required: true,
+//     },
+//     img: {
+//         type: String, // URL or path to the image
+//     },
+//     desc: {
+//         type: String,
+//     },
+//     measurements: [measurementSchema],
+//     suppliers: [{
+//         type: Schema.Types.ObjectId, // Assuming suppliers are referenced by their ObjectId
+//         ref: 'Supplier',
+//         required: false // Making it optional
+//     }],
+// }, { timestamps: true });
+
+const productSchema = new mongoose.Schema({
+    title: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+    category: {
+        type: String,
+        required: true,
+    },
+    img: {
+        type: String, // URL or path to the image
+    },
+    desc: {
+        type: String,
+    },
+    measurements: [{
+        type: {
+            type: String, // 'type' is a field of the measurement object
+            required: true
+        },
+        quantity: {
+            type: Number,
+            required: true
+        },
+        barCode: {
+            type: String, // 'type' is a field of the measurement object
+            required: false,
+            unique: true
+        },
+    }],
+    suppliers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Supplier',
+        required: false
+    }],
+}, { timestamps: true });
+
+
 const logSchema = new mongoose.Schema({
     user: String, // User who made the change
     action: String, // Type of action (e.g., 'create', 'update', 'delete')
@@ -63,34 +126,8 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const productSchema = new mongoose.Schema(
-    {
-        title: {
-            type: String,
-            required: true,
-            unique: true,
-        },
-        category: {
-            type: String,
-            required: true,
-        },
-        img: {
-            type: String, // URL or path to the image
-        },
-        desc: {
-            type: String,
-        },
-        measurements: [measurementSchema],
-        suppliers: [String], // Array of supplier IDs or names
-    },
-    { timestamps: true }
-);
 
 const stockSchema = new Schema({
-        receiptNumber: {
-            type: String,
-            required: true
-        },
         supplier: {
             type: Schema.Types.ObjectId,
             ref: 'Supplier',
@@ -101,11 +138,16 @@ const stockSchema = new Schema({
             ref: 'Product',
             required: true
         },
-        stockMeasure: measurementSchema, // Use the existing measurement schema
-        stockQuantity: {
-            type: Number,
-            required: true
-        },
+        stockMeasure: {
+            type: {
+                type: String, // 'type' is a field of the measurement object
+                required: true
+            },
+            quantity: {
+                type: Number,
+                required: true
+            }
+        }, // Use the existing measurement schema
         totalPrice: {
             type: Number,
             required: true

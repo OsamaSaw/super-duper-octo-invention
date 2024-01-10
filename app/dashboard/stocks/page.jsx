@@ -11,14 +11,18 @@ const StocksPage = async ({ searchParams }) => {
   const q = searchParams?.q || "";
   const page = searchParams?.page || 1;
   const { count, stocks } = await fetchStocks(q, page);
-
   return (
     <div className={styles.container}>
       <div className={styles.top}>
         <Search placeholder="Search for a stock..." />
+        <div className={'space-x-3'}>
         <Link href="/dashboard/stocks/add">
           <button className={styles.addButton}>Add New</button>
         </Link>
+        <Link href="/dashboard/stocks/bulk">
+          <button className={styles.addButton}>Add Bulk</button>
+        </Link>
+        </div>
       </div>
       <table className={styles.table}>
         <thead>
@@ -33,7 +37,7 @@ const StocksPage = async ({ searchParams }) => {
         </thead>
         <tbody>
           {stocks.map((stock) => (
-            <tr key={stock.id}>
+            <tr key={stock._id}>
               <td>
                 <div className={styles.product}>
                   <Image
@@ -43,7 +47,7 @@ const StocksPage = async ({ searchParams }) => {
                     height={40}
                     className={styles.productImage}
                   />
-                  {stock.title}
+                  {stock.productDetails.title}
                 </div>
               </td>
               <td>{stock.desc}</td>

@@ -15,7 +15,7 @@ const SuppliersPage = async ({ searchParams }) => {
   return (
     <div className={styles.container}>
       <div className={styles.top}>
-        <Search placeholder="Search for a product..." />
+        <Search placeholder="Search for a supplier..." />
         <Link href="/dashboard/suppliers/add">
           <button className={styles.addButton}>Add New</button>
         </Link>

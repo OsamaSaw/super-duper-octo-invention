@@ -7,7 +7,43 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcrypt";
 import { signIn } from "../auth";
 import sha1 from 'crypto-js/sha1';
+import mongoose from "mongoose";
 
+
+export const getProduct = async (id) => {
+  try {
+    connectToDB();
+    const product = await Product.findById(id);
+    return product;
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to fetch product!");
+  }
+};
+
+export const getProductByBarcode = async (barcode) => {
+  try {
+    connectToDB();
+    const product = await Product.findOne({ 'measurements.barCode': barcode });
+    return JSON.parse(JSON.stringify(product));
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to fetch product by barcode!");
+  }
+};
+export const getProductMeasures = async (id) => {
+  try {
+    await connectToDB(); // Make sure to await the connection
+    const product = await Product.findById(id);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+    return JSON.parse(JSON.stringify(product.measurements)); // Return only the measurements field
+  } catch (err) {
+    console.log(err);
+    throw new Error("Failed to fetch product!");
+  }
+};
 
 export const addUser = async (formData) => {
   const { username, email, password, phone, address, isAdmin, isActive } =
@@ -72,48 +108,49 @@ export const updateUser = async (formData) => {
 };
 
 // Assuming connectToDB, revalidatePath, and redirect are defined elsewhere
+export const fetchProductsList = async () => {
+  try {
+    connectToDB();
+    const products = await Product.find({});
+    return products.map(product => ({
+      label: product.title, // Assuming each product has a 'title' field
+      value: product._id.toString(), // Convert ObjectId to string
+      // measurements: JSON.parse(JSON.stringify(product.measurements))
+    }));
+    // return products
+  } catch (err) {
+    console.error("Failed to fetch products: ", err);
+    throw err;
+  }
+};
 
 export const addProduct = async (formData) => {
   try {
     connectToDB();
-
     // Handle the image upload first and get the URL/path
     // The logic here depends on how you implement image storage
     let imgPath = ''
 
-    if (formData.get('productImage')) {
+    if (formData.get('image')) {
       try {
-        const imageUrl = await uploadImageDirectly(formData.get('productImage'));
+        imgPath = await uploadImageDirectly(formData.get('image'));
         // Now you have the image URL, proceed with the rest of your form processing
-        console.log('Uploaded image URL:', imageUrl);
-        imgPath = imageUrl
-        // console.log("deleting the image...")
-        // let idTodelete = extractPublicId(imageUrl)
-        // console.log(idTodelete)
-        // console.log("sleep for 5 sec")
-        // await sleep(5000)
-        // console.log(await deleteImageDirectly(idTodelete))
-        // Additional logic to handle the product creation with imageUrl
       } catch (error) {
         console.error('Upload failed:', error);
       }
     }
-
-    // Parse measurements and suppliers
-    const measurements = extractMeasurements(formData);
-    const suppliers = formData.getAll('suppliers');
-
+    console.log(JSON.parse(formData.get('measurements')))
+    console.log(formData.get('measurements'))
     const newProduct = new Product({
       title: formData.get('title'),
-      category: formData.get('cat'),
+      category: formData.get('category'),
       img: imgPath,
       desc: formData.get('desc'),
-      measurements,
-      suppliers
+      measurements: JSON.parse(formData.get('measurements')),
+      suppliers: JSON.parse(formData.get('suppliers')),
     });
-
+    console.log(newProduct)
     await newProduct.save();
-
     return {status:true, msg:"success"}
   } catch (err) {
     await logError(err);
@@ -168,7 +205,12 @@ export const deleteUser = async (formData) => {
 };
 
 export const deleteProduct = async (formData) => {
-  const { id } = Object.fromEntries(formData);
+  const { id, img} = Object.fromEntries(formData);
+  try{
+    deleteImageDirectly(extractPublicId(img))
+  }catch (err){
+    console.log("no image was found")
+  }
 
   try {
     connectToDB();
@@ -180,15 +222,24 @@ export const deleteProduct = async (formData) => {
 
   revalidatePath("/dashboard/products");
 };
+export const fetchSuppliersList = async () => {
+  try {
+    connectToDB();
+    const suppliers = await Supplier.find({});
+    return suppliers.map(supplier => ({
+      label: supplier.name, // Assuming each product has a 'title' field
+      value: supplier._id.toString() // Convert ObjectId to string
+    }));
+  } catch (err) {
+    console.error("Failed to fetch products: ", err);
+    throw err;
+  }
+};
 export const addSupplier = async (formData) => {
   try {
     connectToDB();
 
     const productsDelivered = formData.getAll('productsDelivered');
-    console.log(productsDelivered)
-    productsDelivered.forEach(data => {
-      console.log(data);
-    });
 
     const newCategory = new Supplier({
       name: formData.get('name'),
@@ -196,8 +247,7 @@ export const addSupplier = async (formData) => {
       desc: formData.get('desc'),
       productsDelivered: productsDelivered
     });
-    console.log(newCategory)
-    // await newCategory.save();
+    await newCategory.save();
 
     return {status:true, msg:"success"}
   } catch (err) {
@@ -218,6 +268,32 @@ export const deleteSupplier = async (formData) => {
   }
 
   revalidatePath("/dashboard/suppliers");
+};
+
+export const addStock = async (formData) => {
+  try {
+    connectToDB();
+    const stockMeasure = JSON.parse(formData.get('stockMeasure'));
+    console.log(stockMeasure)
+
+    const newCategory = new Stock({
+      supplier: formData.get('supplier'),
+      product: formData.get('product'),
+      stockMeasure: stockMeasure,
+      totalPrice: formData.get('totalPrice'),
+      expiryDate:formData.get('expiryDate'),
+      desc: formData.get('desc'),
+
+    });
+    console.log(newCategory)
+    await newCategory.save();
+
+    return {status:true, msg:"success"}
+  } catch (err) {
+    await logError(err);
+    return {status:false, msg:err}
+    // throw new Error("Failed to create product!");
+  }
 };
 export const deleteStock = async (formData) => {
   const { id } = Object.fromEntries(formData);
@@ -372,8 +448,8 @@ export const authenticate = async (prevState, formData) => {
   redirect('/dashboard'); //manually redirect
 };
 async function uploadImageDirectly(file) {
-  const cloudName = process.env.CLOUD_NAME; // Replace with your Cloudinary cloud name
-  const uploadPreset = process.env.CLOUD_UPLOAD_PRESET; // Your unsigned upload preset
+  const cloudName = process.env.CLOUD_NAME;
+  const uploadPreset = process.env.CLOUD_UPLOAD_PRESET;
 
   const formData = new FormData();
   formData.append('file', file);
@@ -386,6 +462,9 @@ async function uploadImageDirectly(file) {
     });
 
     if (!response.ok) {
+      console.error('Error uploading image. Response status:', response.status);
+      const errorResponse = await response.json();
+      console.error('Error response from Cloudinary:', errorResponse);
       throw new Error('Network response was not ok.');
     }
 

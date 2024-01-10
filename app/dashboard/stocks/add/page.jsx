@@ -1,91 +1,90 @@
 "use client";
-import { addProduct } from "@/app/lib/actions";
+import {
+  addProduct,
+  addStock,
+  fetchProductsList,
+  fetchSuppliersList,
+  getProduct,
+  getProductMeasures
+} from "@/app/lib/actions";
 import styles from "@/app/ui/dashboard/products/addProduct/addProduct.module.css";
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import Select from "react-select";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import {redirect, useRouter} from "next/navigation";
 import { selectTheme, selectStyle } from "./../../../../utils/selectStyles";
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 
-// This could also be fetched from a database and set in state
-const measurementTypes = [
-  {label: "Select Measurement Type", value: ""},
-  { label: "Pieces", value: "pieces" },
-  { label: "Kilos", value: "kilos" },
-  { label: "Boxes", value: "boxes" },
-];
-
-const ProductsTypes = [
-  { label: "item1", value: "id1" },
-  { label: "item2", value: "id2" },
-  { label: "item3", value: "id3" },
-];
-
-const suppliersList = [
-  { label: "Select a Supplier", value: "" },
-  { label: "Supplier 1", value: "s1" },
-  { label: "Supplier 2", value: "s2" },
-  { label: "Supplier 3", value: "s3" },
-  { label: "Supplier 4", value: "s4" },
-];
 
 
 const AddOrderPage = () => {
   const [measurements, setMeasurements] = useState(
     { type: null, quantity: "" },
   );
-  const [selectedProduct, setSelectedProduct] = useState([]);
+  const router = useRouter();
+
+  const [selectedProduct, setSelectedProduct] = useState();
   const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [productsListNew, setProductsListNew] = useState([]);
+  const [productMeasuresList, setProductMeasuresList] = useState([]);
+  const [suppliersListNew, setSuppliersListNew] = useState([]);
+  const [expiryDate, setExpiryDate] = useState(new Date().setFullYear(new Date().getFullYear() + 1));
 
-  const ProductsOptions = ProductsTypes
-    .filter((option) => option.value !== "")
-    .map((product) => ({
-      label: product.label,
-      value: product.value,
-    }));
 
-  const SuppliersOptions = suppliersList
-      .filter((option) => option.value !== "")
-      .map((place) => ({
-        label: place.label,
-        value: place.value,
-      }));
+  useEffect(() => {
+    // Fetch products when the component mounts
+    const getProducts = async () => {
+      const products = await fetchProductsList();
+      const suppliers = await fetchSuppliersList();
 
-  const measurmentsOptions = measurementTypes
-      .filter((option) => option.value !== "")
-      .map((volume) => ({
-        label: volume.label,
-        value: volume.value,
-      }));
-  const handleProductChange = (selectedOptions) => {
-    // selectedOptions will be an array of { label, value } objects
-    setSelectedProduct(selectedOptions || []);
+      setProductsListNew(products);
+      setSuppliersListNew(suppliers)
+    };
+    // fetchSuppliersList
+    getProducts()
+  }, []);
+
+  useEffect(()=>{
+    const getProductMeasus = async ()=> {
+      if(selectedProduct && selectedProduct.value){
+      console.log(selectedProduct.value)
+      const measurements = await getProductMeasures(selectedProduct.value)
+      const measurementsList = measurements.map(measurement=>({
+        label:measurement.type,
+        value:measurement.type
+      }))
+        setProductMeasuresList(measurementsList)
+      }
+    }
+    getProductMeasus()
+  },[selectedProduct])
+
+  const handleProductChange = async (selectedOptions) => {
+    setSelectedProduct(selectedOptions);
   };
-  const handleDestinationChange = (selectedOptions) => {
-    // selectedOptions will be an array of { label, value } objects
-    setSelectedSupplier(selectedOptions || "");
-  };
 
+  const handleSupplierChange = (selectedOptions) => {
+    // selectedOptions will be an array of { label, value } objects
+    setSelectedSupplier(selectedOptions || []);
+  };
   const inputTheme = "h-10 bg-[#2E374A] rounded-md placeholder:text-white";
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     const formData = new FormData(event.target);
-    // Manually append each measurement to the FormData
-    formData.append('measurement[type]', measurements.type ? measurements.type.value : '');
-    formData.append('measurement[quantity]', measurements.quantity);
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
-
-    // const status = await addProduct(formData);
-    // if (status.status) {
-    //   // revalidatePath("/dashboard/products");
-    //   redirect("/dashboard/products");
-    // } else {
-    //   console.log("Something went wrong try again later");
+    formData.append('stockMeasure', JSON.stringify({ 'type': measurements.type.value, 'quantity': measurements.quantity }));
+    formData.append('expiryDate', expiryDate)
+    // for (let [key, value] of formData.entries()) {
+    //   console.log(`${key}: ${value}`);
     // }
+    const status = await addStock(formData);
+    if (status.status) {
+      router.push('/dashboard/stocks');
+    } else {
+      console.log("Something went wrong try again later");
+    }
   };
 
   return (
@@ -98,7 +97,7 @@ const AddOrderPage = () => {
               theme={selectTheme}
               styles={selectStyle}
               className={styles.formElement} // Apply your styling
-              options={ProductsOptions}
+              options={productsListNew}
               onChange={handleProductChange}
               value={selectedProduct}
               placeholder="Select Product"
@@ -108,11 +107,11 @@ const AddOrderPage = () => {
             <Select
                 theme={selectTheme}
                 styles={selectStyle}
-                name="deliveryMethod"
-                id="deliveryMethod"
+                name="supplier"
+                id="supplier"
                 className={`${styles.formElement}`} // Apply your styling
-                options={SuppliersOptions}
-                onChange={handleDestinationChange}
+                options={suppliersListNew}
+                onChange={handleSupplierChange}
                 value={selectedSupplier}
                 placeholder="Select Supplier"
                 required
@@ -125,7 +124,7 @@ const AddOrderPage = () => {
                   styles={selectStyle}
                   className="w-1/2 mr-5"
                   value={measurements.type}
-                  options={measurmentsOptions}
+                  options={productMeasuresList}
                   onChange={(selectedOption) =>
                       setMeasurements({ ...measurements, type: selectedOption })
                   }
@@ -145,6 +144,15 @@ const AddOrderPage = () => {
                   placeholder="Quantity"
                   inputMode="numeric"
                   required
+              />
+            </div>
+            <div>
+              <label htmlFor="expiry-date-picker">Expiry Date:</label> {/* Label for the date picker */}
+              <DatePicker
+                  id="expiry-date-picker" // Adding an id for accessibility
+                  selected={expiryDate}
+                  onChange={(date) => setExpiryDate(date)}
+                  dateFormat="dd/MM/yyyy"
               />
             </div>
             <input
