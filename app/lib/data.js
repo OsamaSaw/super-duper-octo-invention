@@ -88,7 +88,7 @@ export const fetchProductsWithStocks = async (q, page) => {
           as: 'stocks'
         }
       },
-      { $unwind: "$stocks" }, // Deconstruct the stocks array
+      { $unwind: { path: "$stocks", preserveNullAndEmptyArrays: true } },
       { $sort: { "stocks.expiryDate": 1 } }, // Sort by expiry date
       {
         $group: {
@@ -125,7 +125,7 @@ export const fetchProductsWithStocks = async (q, page) => {
 
     // Count total matching documents (for pagination)
     const count = await Product.find({ title: { $regex: regex } }).count();
-
+    console.log({productsWithStocks})
     return { count, products: productsWithStocks };
   } catch (err) {
     console.log(err);
@@ -147,7 +147,6 @@ export const fetchProduct = async (id) => {
 };
 
 export const fetchStocks = async (q, page) => {
-  console.log(q);
   const regex = new RegExp(q, "i");
 
   const ITEM_PER_PAGE = 2;
@@ -155,33 +154,40 @@ export const fetchStocks = async (q, page) => {
   try {
     await connectToDB();
 
-    // Assuming 'products' is the name of your products collection
+    let matchStage = q ? { $match: { 'productDetails.title': { $regex: regex } } } : null;
+    let skipValue = ITEM_PER_PAGE * (page - 1); // Calculate skip value based on page number
     let aggregation = [
       {
         $lookup: {
-          from: 'products', // Replace with your actual products collection name
-          localField: 'product', // Field in the 'stocks' collection
-          foreignField: '_id', // Field in the 'products' collection
-          as: 'productDetails' // Array containing the matching product
+          from: 'products',
+          localField: 'product',
+          foreignField: '_id',
+          as: 'productDetails'
         }
       },
       {
-        $unwind: '$productDetails' // Deconstructs the 'productDetails' array
+        $lookup: {
+          from: 'suppliers', // Replace with your supplier collection name if different
+          localField: 'supplier',
+          foreignField: '_id',
+          as: 'supplierDetails'
+        }
       },
       {
-        $match: { 'productDetails.title': { $regex: regex } } // Filter by product name
+        $unwind: '$productDetails'
+      },
+      matchStage,
+      {
+        $skip: skipValue
       },
       {
         $limit: ITEM_PER_PAGE
-      },
-      {
-        $skip: ITEM_PER_PAGE * (page - 1)
       }
-    ];
+    ].filter(stage => stage !== null);
 
     const stocks = await Stock.aggregate(aggregation);
 
-    // Count can be obtained by a separate aggregation without limit and skip
+    // Count aggregation
     let countAggregation = [
       {
         $lookup: {
@@ -194,23 +200,21 @@ export const fetchStocks = async (q, page) => {
       {
         $unwind: '$productDetails'
       },
+      matchStage,
       {
-        $match: { 'productDetails.title': { $regex: regex } }
-      },
-      {
-        $count: 'total'
+        $count: "total"
       }
-    ];
+    ].filter(stage => stage !== null);
 
     const countResult = await Stock.aggregate(countAggregation);
     const count = countResult.length > 0 ? countResult[0].total : 0;
 
+    // console.log(JSON.stringify(stocks[0], null, 2));
     return { count, stocks };
   } catch (err) {
     console.log(err);
     throw new Error("Failed to fetch stocks!");
   }
-
 };
 
 export const fetchStock = async (id) => {

@@ -1,13 +1,13 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import styles from "@/app/ui/dashboard/products/addProduct/addProduct.module.css";
-import {addStock, fetchSuppliersList, getProductByBarcode} from "@/app/lib/actions";
+import {getDeliveryMethods, getProductByBarcode} from "@/app/lib/actions";
 import Select from "react-select";
 import { selectStyle, selectTheme } from "@/utils/selectStyles";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
 import DatePicker from "react-datepicker";
-import SimpleModal from "@/app/ui/simpleModel";
 
 const AddMultipleItemsPage = () => {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
@@ -18,18 +18,17 @@ const AddMultipleItemsPage = () => {
       productName: "",
       measurement: "",
       quantity: "",
-      price: "",
-      expiryDate: "",
+      // price: "",
+      // expiryDate: "",
       barcode: "",
     },
   ]);
   const lastBarcodeRef = useRef(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [itemsToConfirm, setItemsToConfirm] = useState([]);
+
   useEffect(() => {
     const fetchAndSetSuppliers = async () => {
-      const suppliersFetchList = await fetchSuppliersList();
-      setSuppliersListNew(suppliersFetchList);
+      const DeliveryMethodsFetchList = await getDeliveryMethods();
+      setSuppliersListNew(DeliveryMethodsFetchList);
     };
 
     fetchAndSetSuppliers();
@@ -41,6 +40,7 @@ const AddMultipleItemsPage = () => {
 
   const handleBarcodeKeyPress = async (event, index) => {
     if (event.key === "Enter") {
+      console.log("Enter is pressed");
       event.preventDefault();
       const checkBarcode = await handleBarcodeScanned(index); // Ensure this is awaited
       if (index === items.length - 1 && checkBarcode) {
@@ -54,6 +54,7 @@ const AddMultipleItemsPage = () => {
   };
   const handleInputChange = (index, event) => {
     const newItems = [...items];
+    console.log(newItems[index][event.target.name]);
     newItems[index][event.target.name] = event.target.value;
     setItems(newItems);
   };
@@ -66,8 +67,8 @@ const AddMultipleItemsPage = () => {
         productName: "",
         measurement: "",
         quantity: "",
-        price: "",
-        expiryDate: "",
+        // price: "",
+        // expiryDate: "",
         barcode: "",
       },
     ]);
@@ -104,6 +105,7 @@ const AddMultipleItemsPage = () => {
     // Fetch product details by barcode
     try {
       const productDetails = await getProductByBarcode(barcode);
+      console.log(productDetails);
       const matchingMeasurement = productDetails.measurements.find(
         (measurement) => measurement.barCode === barcode
       );
@@ -112,8 +114,8 @@ const AddMultipleItemsPage = () => {
         productName: productDetails.title,
         measurement: matchingMeasurement ? matchingMeasurement.type : "",
         quantity: 1,
-        price: productDetails.price ?? 0, // Assuming this needs to be filled in separately
-        expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+        // price: productDetails.price ?? 0, // Assuming this needs to be filled in separately
+        // expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
 
       };
       const newItems = [...items];
@@ -126,38 +128,8 @@ const AddMultipleItemsPage = () => {
   };
 
   const handleSubmit = async (event) => {
-    event.preventDefault()
-    if(items.length ===1 && items[0].productName === '') {
-      return toast("you need to add at least one product");
-    }
-    const filteredItems = items.filter(item => item.barcode && item.productName && item.quantity);
-    setItemsToConfirm(filteredItems);
-    setIsModalOpen(true);
-
-
+    console.log("Submit was clicked");
   };
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-  const handleConfirmItems = async () => {
-    const results = [];
-    for (const item of itemsToConfirm) {
-      const formData = new FormData();
-      formData.append('supplier', selectedSupplier.value); // Assuming supplier is part of your item or obtained elsewhere
-      formData.append('product', item.productId); // Adjust based on your fields
-      formData.append('stockMeasure', JSON.stringify({ 'type': item.measurement, 'quantity': item.quantity }));
-      formData.append('totalPrice', item.price.toString());
-      formData.append('expiryDate', item.expiryDate);
-      formData.append('desc', ''); // Add description if available
-      formData.append('totalPrice', item.price)
-
-      const status = await addStock(formData);
-
-      results.push({ productId: item.productId, status });
-    }
-    setIsModalOpen(false);
-  };
-
   const deleteItem = (index) => {
     const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
@@ -194,42 +166,28 @@ const AddMultipleItemsPage = () => {
                 readOnly
                 // ... other necessary attributes
               />
-              <input
-                className={`w-1/2 ${inputTheme}`}
-                type="date"
-                placeholder="Expiry Data"
-                name="expiryData"
-                value={item.expiryDate || null}
-                onChange={(e) => handleInputChange(index, e)}
-              />
+
             </div>
 
             {/* Second line with measurement, quantity, and price */}
             <div className="flex space-x-2 flex-row items-center">
               <input
                 name="measurement"
-                className={`w-1/3 ${inputTheme}`}
+                className={`w-1/2 ${inputTheme}`}
                 value={item.measurement}
                 onChange={(e) => handleInputChange(index, e)}
                 placeholder="Measurement Type"
                 readOnly
               />
               <input
-                className={`w-1/3 ${inputTheme}`}
+                className={`w-1/2 ${inputTheme}`}
                 type="number"
                 value={item.quantity}
                 onChange={(e) => handleInputChange(index, e)}
                 placeholder="Quantity"
                 name="quantity"
               />
-              <input
-                className={`w-1/3 ${inputTheme}`}
-                type="number"
-                placeholder="Price"
-                name="price"
-                value={item.price}
-                onChange={(e) => handleInputChange(index, e)}
-              />
+
               {/* Delete Button (not for the first item) */}
               {index > 0 && (
                 <button
@@ -271,7 +229,7 @@ const AddMultipleItemsPage = () => {
           options={suppliersListNew}
           onChange={handleSupplierChange}
           value={selectedSupplier}
-          placeholder="Select Supplier"
+          placeholder="Select Destination"
           required
         />
 
@@ -280,18 +238,15 @@ const AddMultipleItemsPage = () => {
           name="desc"
           id="desc"
           rows="4"
-          placeholder="Description"
+          placeholder="Notes"
         ></textarea>
 
-        {/* Submit button */}
         <button className={`${styles.formButton} w-full`} type="submit">
           Submit
         </button>
       </form>
       <ToastContainer />
-      <SimpleModal isOpen={isModalOpen} onClose={handleCloseModal} onConfirm={handleConfirmItems} items={itemsToConfirm} />
     </div>
-
   );
 };
 

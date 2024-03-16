@@ -28,10 +28,10 @@ const StocksPage = async ({ searchParams }) => {
         <thead>
           <tr>
             <td>Title</td>
-            <td>Description</td>
-            <td>Price</td>
+            <td>Supplier</td>
+            <td>Price / Piece</td>
+            <td>Quantity</td>
             <td>Up coming expiry</td>
-            <td>Stock</td>
             <td>Action</td>
           </tr>
         </thead>
@@ -41,7 +41,7 @@ const StocksPage = async ({ searchParams }) => {
               <td>
                 <div className={styles.product}>
                   <Image
-                    src={stock.img || "/noproduct.jpg"}
+                    src={stock.productDetails.img || "/noproduct.jpg"}
                     alt=""
                     width={40}
                     height={40}
@@ -50,10 +50,10 @@ const StocksPage = async ({ searchParams }) => {
                   {stock.productDetails.title}
                 </div>
               </td>
-              <td>{stock.desc}</td>
-              <td>${stock.price}</td>
+              <td>{stock.supplierDetails[0].name ?? "Unknown Supplier"}</td>
+              <td>${stock.totalPrice} ({(stock.totalPrice / stock.stockMeasure.quantity).toFixed(2)})</td>
+              <td>{stock.stockMeasure.quantity} {stock.stockMeasure.type}</td>
               <td>{stock.createdAt?.toString().slice(4, 16)}</td>
-              <td>{stock.stock}</td>
               <td>
                 <div className={styles.buttons}>
                   <Link href={`/dashboard/stocks/${stock.id}`}>

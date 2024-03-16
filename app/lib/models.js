@@ -63,6 +63,10 @@ const productSchema = new mongoose.Schema({
             unique: true
         },
     }],
+    price: {
+        type: Number,
+        required: true
+    },
     suppliers: [{
         type: Schema.Types.ObjectId,
         ref: 'Supplier',

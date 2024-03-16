@@ -20,7 +20,6 @@ export const getProduct = async (id) => {
     throw new Error("Failed to fetch product!");
   }
 };
-
 export const getProductByBarcode = async (barcode) => {
   try {
     connectToDB();
@@ -44,7 +43,6 @@ export const getProductMeasures = async (id) => {
     throw new Error("Failed to fetch product!");
   }
 };
-
 export const addUser = async (formData) => {
   const { username, email, password, phone, address, isAdmin, isActive } =
     Object.fromEntries(formData);
@@ -74,7 +72,6 @@ export const addUser = async (formData) => {
   revalidatePath("/dashboard/users");
   redirect("/dashboard/users");
 };
-
 export const updateUser = async (formData) => {
   const { id, username, email, password, phone, address, isAdmin, isActive } =
     Object.fromEntries(formData);
@@ -106,7 +103,6 @@ export const updateUser = async (formData) => {
   revalidatePath("/dashboard/users");
   redirect("/dashboard/users");
 };
-
 // Assuming connectToDB, revalidatePath, and redirect are defined elsewhere
 export const fetchProductsList = async () => {
   try {
@@ -123,7 +119,6 @@ export const fetchProductsList = async () => {
     throw err;
   }
 };
-
 export const addProduct = async (formData) => {
   try {
     connectToDB();
@@ -148,6 +143,7 @@ export const addProduct = async (formData) => {
       desc: formData.get('desc'),
       measurements: JSON.parse(formData.get('measurements')),
       suppliers: JSON.parse(formData.get('suppliers')),
+      price:formData.get('price'),
     });
     console.log(newProduct)
     await newProduct.save();
@@ -158,7 +154,6 @@ export const addProduct = async (formData) => {
     // throw new Error("Failed to create product!");
   }
 };
-
 export const updateProduct = async (formData) => {
   const { id, title, desc, price, stock, color, size } =
     Object.fromEntries(formData);
@@ -189,7 +184,6 @@ export const updateProduct = async (formData) => {
   revalidatePath("/dashboard/products");
   redirect("/dashboard/products");
 };
-
 export const deleteUser = async (formData) => {
   const { id } = Object.fromEntries(formData);
 
@@ -203,7 +197,6 @@ export const deleteUser = async (formData) => {
 
   revalidatePath("/dashboard/products");
 };
-
 export const deleteProduct = async (formData) => {
   const { id, img} = Object.fromEntries(formData);
   try{
@@ -269,7 +262,6 @@ export const deleteSupplier = async (formData) => {
 
   revalidatePath("/dashboard/suppliers");
 };
-
 export const addStock = async (formData) => {
   try {
     connectToDB();
@@ -308,7 +300,6 @@ export const deleteStock = async (formData) => {
 
   revalidatePath("/dashboard/stocks");
 };
-
 export const addCategory = async (formData) => {
   try {
     connectToDB();
@@ -351,7 +342,6 @@ export const updateCategory = async (formData) => {
   revalidatePath("/dashboard/categories");
   redirect("/dashboard/categories");
 };
-
 export const deleteCategory = async (formData) => {
   const { id } = Object.fromEntries(formData);
 
@@ -384,7 +374,6 @@ export const addDeliveryMethod = async (formData) => {
     // throw new Error("Failed to create product!");
   }
 };
-
 export const updateDeliveryMethod = async (formData) => {
   const { id, name, desc } =
       Object.fromEntries(formData);
@@ -422,7 +411,19 @@ export const deleteDeliveryMethod = async (formData) => {
 
   revalidatePath("/dashboard/DeliveryMethods");
 };
-
+export const getDeliveryMethods = async () =>{
+  try {
+    connectToDB();
+    const deliveryMethods = await DeliveryMethod.find({});
+    return deliveryMethods.map(branch => ({
+      label: branch.name, // Assuming each product has a 'title' field
+      value: branch._id.toString() // Convert ObjectId to string
+    }));
+  } catch (err) {
+    console.error("Failed to fetch products: ", err);
+    throw err;
+  }
+}
 export const deleteOrder = async (formData) => {
   const { id } = Object.fromEntries(formData);
 
@@ -436,7 +437,6 @@ export const deleteOrder = async (formData) => {
 
   revalidatePath("/dashboard/orders");
 };
-
 export const authenticate = async (prevState, formData) => {
   const { username, password } = Object.fromEntries(formData);
 
@@ -521,7 +521,6 @@ async function deleteImageDirectly(publicId) {
     console.error('Error:', error);
   }
 }
-
 // Helper function to extract measurements from formData
 function extractMeasurements(formData) {
   const measurements = [];

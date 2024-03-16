@@ -76,9 +76,6 @@ const AddOrderPage = () => {
     const formData = new FormData(event.target);
     formData.append('stockMeasure', JSON.stringify({ 'type': measurements.type.value, 'quantity': measurements.quantity }));
     formData.append('expiryDate', expiryDate)
-    // for (let [key, value] of formData.entries()) {
-    //   console.log(`${key}: ${value}`);
-    // }
     const status = await addStock(formData);
     if (status.status) {
       router.push('/dashboard/stocks');

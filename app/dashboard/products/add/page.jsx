@@ -34,7 +34,9 @@ const AddProductPage = () => {
     { type: "Select Measurement Type", quantity: "", barCode:"" },
   ]);
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(0);
+  const [selectedPrice, setSelectedPrice] = useState(null);
+
   const [image, setImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const supplierOptions = supplierList
@@ -64,6 +66,9 @@ const AddProductPage = () => {
   const handleMeasurementChange = (index, field, value) => {
     const newMeasurements = [...measurements];
     newMeasurements[index][field] = value;
+    if (index === 0) {
+      newMeasurements[index]['quantity'] = 1;
+    }
     setMeasurements(newMeasurements);
   };
   const isAddMoreButtonVisible = () => {
@@ -111,7 +116,9 @@ const AddProductPage = () => {
     formData.append('image', selectedFile);  // Assuming 'image' is a File object
     formData.append('measurements', JSON.stringify(measures));
     formData.append('suppliers', JSON.stringify(suppliers));
+    formData.append('price', selectedPrice)
     // console.log(JSON.stringify(measures))
+
     const status = await addProduct(formData)
     console.log(status)
     router.push("/dashboard/products");
@@ -167,7 +174,7 @@ const AddProductPage = () => {
                 placeholder="Select Category"
               />
             </div>
-
+            <div className="flex items-center space-x-5">
             <Select
               name="suppliers"
               theme={selectTheme}
@@ -179,6 +186,19 @@ const AddProductPage = () => {
               value={selectedSuppliers}
               placeholder="Select suppliers"
             />
+              <input
+                  className={`${styles.formElement} ${inputTheme} pl-2`} // Apply styles to input
+                  type="number"
+                  value={selectedPrice}
+                  onChange={(e) =>
+                      setSelectedPrice(e.target.value)
+                  }
+                  placeholder="Price"
+                  inputMode="numeric"
+                  required
+              />
+
+            </div>
             {measurements.map((measurement, index) => (
               <div key={index} className={`${styles.measurementField} space-x-5`}>
                 {/* Measurement Type Dropdown */}
@@ -201,12 +221,13 @@ const AddProductPage = () => {
                 <input
                   className={`${styles.formElement} ${inputTheme} pl-2`} // Apply styles to input
                   type="number"
-                  value={measurement.quantity}
+                  value={index === 0 ? 1:measurement.quantity}
                   onChange={(e) =>
                     handleMeasurementChange(index, "quantity", e.target.value)
                   }
                   placeholder="Quantity"
                   inputMode="numeric"
+                  disabled={index === 0}
                   required
                 />
                 <input

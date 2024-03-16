@@ -16,9 +16,15 @@ const ProductsPage = async ({ searchParams }) => {
     <div className={styles.container}>
       <div className={styles.top}>
         <Search placeholder="Search for an order..." />
-        <Link href="/dashboard/orders/add">
-          <button className={styles.addButton}>Add New</button>
-        </Link>
+          <div className={'space-x-3'}>
+              <Link href="/dashboard/orders/add">
+                  <button className={styles.addButton}>Add New</button>
+              </Link>
+              <Link href="/dashboard/orders/bulk">
+                  <button className={styles.addButton}>Add Bulk</button>
+              </Link>
+          </div>
+
       </div>
       <table className={styles.table}>
         <thead>
