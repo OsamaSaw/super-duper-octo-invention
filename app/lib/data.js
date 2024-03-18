@@ -290,34 +290,10 @@ export const oldFetchOrders = async (q, page) => {
   const ITEM_PER_PAGE = 2;
 
   try {
-    connectToDB();
-    const count = await Order.find({ title: { $regex: regex } }).count();
-    const orders = await Order.find({ title: { $regex: regex } })
-        .limit(ITEM_PER_PAGE)
-        .skip(ITEM_PER_PAGE * (page - 1));
-    return { count, orders };
-  } catch (err) {
-    console.log(err);
-    throw new Error("Failed to fetch Orders!");
-  }
-};
-
-export const fetchOrders = async (q, page) => {
-  const regex = new RegExp(q, "i");
-  const ITEM_PER_PAGE = 2;
-
-  try {
     await connectToDB();
 
-    let matchStage = q ? {
-      $match: {
-        $or: [
-          { 'productDetails.title': { $regex: regex } }, // Adjust this path if necessary
-          { 'deliveryMethodDetails.name': { $regex: regex } } // Adjust this path if necessary
-        ]
-      }
-    } : null;
-
+    const regex = q ? new RegExp(q, "i") : null;
+    const ITEM_PER_PAGE = 2;
     let skipValue = ITEM_PER_PAGE * (page - 1); // Calculate skip value based on page number
 
     let aggregation = [
@@ -339,23 +315,61 @@ export const fetchOrders = async (q, page) => {
       },
       {
         $unwind: {
-          path: '$deliveryMethodDetails',
+          path: '$productDetails',
           preserveNullAndEmptyArrays: true
         }
       },
       {
         $unwind: {
-          path: '$productDetails',
+          path: '$deliveryMethodDetails',
           preserveNullAndEmptyArrays: true
         }
       },
-
+      // Directly integrate $match stage into the pipeline based on `q`
+      ...(q ? [{
+        $match: {
+          $or: [
+            { 'productDetails.title': { $regex: regex } },
+            { 'deliveryMethodDetails.name': { $regex: regex } }
+          ]
+        }
+      }] : []),
+      { $skip: skipValue },
+      { $limit: ITEM_PER_PAGE }
     ];
 
     const orders = await Order.aggregate(aggregation);
 
-    // Count aggregation
+    // Adjust the count aggregation similarly to include the $match stage when q is provided
     let countAggregation = [
+      ...aggregation.filter(stage => stage.$skip === undefined && stage.$limit === undefined), // Reuse initial stages but exclude $skip and $limit
+      { $count: "total" }
+    ];
+
+    const countResult = await Order.aggregate(countAggregation);
+    const count = countResult.length > 0 ? countResult[0].total : 0;
+
+    return { count, orders };
+  } catch (err) {
+    console.log("Error details:", err);
+    console.log("Error message:", err.message);
+    if (err.stack) {
+      console.log("Error stack:", err.stack);
+    }
+    throw new Error(`Failed to fetch orders! Original error: ${err.message}`);
+  }
+
+};
+
+export const fetchOrders = async (q, page) => {
+  const ITEM_PER_PAGE = 2;
+  let skipValue = ITEM_PER_PAGE * (page - 1); // Calculate skip value based on page number
+
+  try {
+    await connectToDB();
+
+    const regex = q ? new RegExp(q, "i") : null;
+    let aggregationPipeline = [
       {
         $lookup: {
           from: 'products',
@@ -366,16 +380,10 @@ export const fetchOrders = async (q, page) => {
       },
       {
         $lookup: {
-          from: 'deliverymethods', // Corrected to match the actual collection name
+          from: 'deliverymethods',
           localField: 'deliveryMethod',
           foreignField: '_id',
           as: 'deliveryMethodDetails'
-        }
-      },
-      {
-        $unwind: {
-          path: '$deliveryMethodDetails',
-          preserveNullAndEmptyArrays: true
         }
       },
       {
@@ -384,13 +392,32 @@ export const fetchOrders = async (q, page) => {
           preserveNullAndEmptyArrays: true
         }
       },
-      matchStage,
       {
-        $count: "total"
-      }
-    ].filter(stage => stage !== null);
+        $unwind: {
+          path: '$deliveryMethodDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // Conditional $match stage for search functionality
+      ...(q ? [{
+        $match: {
+          $or: [
+            { 'productDetails.title': { $regex: regex } },
+            { 'deliveryMethodDetails.name': { $regex: regex } }
+          ]
+        }
+      }] : []),
+      { $skip: skipValue },
+      { $limit: ITEM_PER_PAGE }
+    ];
 
-    const countResult = await Order.aggregate(countAggregation);
+    const orders = await Order.aggregate(aggregationPipeline);
+
+    // For the total count, reuse most of the pipeline but exclude $skip and $limit stages
+    let countPipeline = aggregationPipeline.slice(0, aggregationPipeline.length - 2); // Remove last two stages ($skip and $limit)
+    countPipeline.push({ $count: "total" });
+
+    const countResult = await Order.aggregate(countPipeline);
     const count = countResult.length > 0 ? countResult[0].total : 0;
 
     return { count, orders };
