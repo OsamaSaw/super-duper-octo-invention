@@ -133,8 +133,6 @@ export const fetchProductsWithStocks = async (q, page) => {
   }
 };
 
-
-
 export const fetchProduct = async (id) => {
   try {
     connectToDB();
@@ -285,7 +283,7 @@ export const fetchDeliveryMethod = async (id) => {
   }
 };
 
-export const fetchOrders = async (q, page) => {
+export const oldFetchOrders = async (q, page) => {
   console.log(q);
   const regex = new RegExp(q, "i");
 
@@ -303,6 +301,109 @@ export const fetchOrders = async (q, page) => {
     throw new Error("Failed to fetch Orders!");
   }
 };
+
+export const fetchOrders = async (q, page) => {
+  const regex = new RegExp(q, "i");
+  const ITEM_PER_PAGE = 2;
+
+  try {
+    await connectToDB();
+
+    let matchStage = q ? {
+      $match: {
+        $or: [
+          { 'productDetails.title': { $regex: regex } }, // Adjust this path if necessary
+          { 'deliveryMethodDetails.name': { $regex: regex } } // Adjust this path if necessary
+        ]
+      }
+    } : null;
+
+    let skipValue = ITEM_PER_PAGE * (page - 1); // Calculate skip value based on page number
+
+    let aggregation = [
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
+        }
+      },
+      {
+        $lookup: {
+          from: 'deliverymethods',
+          localField: 'deliveryMethod',
+          foreignField: '_id',
+          as: 'deliveryMethodDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$deliveryMethodDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $unwind: {
+          path: '$productDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+    ];
+
+    const orders = await Order.aggregate(aggregation);
+
+    // Count aggregation
+    let countAggregation = [
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
+        }
+      },
+      {
+        $lookup: {
+          from: 'deliverymethods', // Corrected to match the actual collection name
+          localField: 'deliveryMethod',
+          foreignField: '_id',
+          as: 'deliveryMethodDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$deliveryMethodDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $unwind: {
+          path: '$productDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      matchStage,
+      {
+        $count: "total"
+      }
+    ].filter(stage => stage !== null);
+
+    const countResult = await Order.aggregate(countAggregation);
+    const count = countResult.length > 0 ? countResult[0].total : 0;
+
+    return { count, orders };
+  } catch (err) {
+    console.log("Error details:", err);
+    console.log("Error message:", err.message);
+    if (err.stack) {
+      console.log("Error stack:", err.stack);
+    }
+    throw new Error(`Failed to fetch orders! Original error: ${err.message}`);
+  }
+};
+
 
 export const fetchOrder = async (id) => {
   try {

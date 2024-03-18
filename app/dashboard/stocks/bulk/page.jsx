@@ -12,6 +12,7 @@ import SimpleModal from "@/app/ui/simpleModel";
 const AddMultipleItemsPage = () => {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [suppliersListNew, setSuppliersListNew] = useState([]);
+  const [description, setDescription] = useState('');
 
   const [items, setItems] = useState([
     {
@@ -143,13 +144,13 @@ const AddMultipleItemsPage = () => {
     const results = [];
     for (const item of itemsToConfirm) {
       const formData = new FormData();
-      formData.append('supplier', selectedSupplier.value); // Assuming supplier is part of your item or obtained elsewhere
-      formData.append('product', item.productId); // Adjust based on your fields
+      formData.append('supplier', selectedSupplier.value);
+      formData.append('product', item.productId);
       formData.append('stockMeasure', JSON.stringify({ 'type': item.measurement, 'quantity': item.quantity }));
       formData.append('totalPrice', item.price.toString());
       formData.append('expiryDate', item.expiryDate);
-      formData.append('desc', ''); // Add description if available
-      formData.append('totalPrice', item.price)
+      formData.append('desc', description);
+      formData.append('totalPrice', item.price);
 
       const status = await addStock(formData);
 
@@ -276,11 +277,13 @@ const AddMultipleItemsPage = () => {
         />
 
         <textarea
-          className={`w-full rounded-md h-24 ${inputTheme}`}
-          name="desc"
-          id="desc"
-          rows="4"
-          placeholder="Description"
+            className={`w-full rounded-md h-24 ${inputTheme}`}
+            name="desc"
+            id="desc"
+            rows="4"
+            placeholder="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
         ></textarea>
 
         {/* Submit button */}

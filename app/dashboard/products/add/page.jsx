@@ -31,7 +31,7 @@ const supplierList = [
 
 const AddProductPage = () => {
   const [measurements, setMeasurements] = useState([
-    { type: "Select Measurement Type", quantity: "", barCode:"" },
+    { type: "Select Measurement Type", quantity: "", barCode:"", isPrimary:false },
   ]);
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(0);
@@ -100,7 +100,8 @@ const AddProductPage = () => {
       measures.push({
         quantity: measurement.quantity,
         type: measurement.type,
-        barCode:measurement.barCode
+        barCode:measurement.barCode,
+        isPrimary: index === 0
       });
     });
     selectedSuppliers.forEach((supplier, index) => {

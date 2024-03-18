@@ -62,6 +62,10 @@ const productSchema = new mongoose.Schema({
             required: false,
             unique: true
         },
+        isPrimary: {
+            type: Boolean,
+            required: true,
+        },
     }],
     price: {
         type: Number,
@@ -237,6 +241,9 @@ const orderSchema = new Schema({
             type: Schema.Types.ObjectId,
             ref: 'DeliveryMethod',
             required: true
+        },
+        desc: {
+            type: String,
         }
     },
     { timestamps: true }

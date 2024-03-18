@@ -1,5 +1,5 @@
 "use client";
-import {addProduct, fetchProductsList} from "@/app/lib/actions";
+import {addOrder, fetchProductsList, getDeliveryMethods, getProductMeasures} from "@/app/lib/actions";
 import styles from "@/app/ui/dashboard/products/addProduct/addProduct.module.css";
 import {useEffect, useState} from "react";
 import Select from "react-select";
@@ -37,23 +37,21 @@ const AddOrderPage = () => {
   const [selectedProduct, setSelectedProduct] = useState([]);
   const [selectedDestination, setSelectedDestination] = useState(null);
   const [productsListNew, setProductsListNew] = useState([]);
+  const [measurementOptions , setMeasurementOptions] = useState([])
+  const [deliveryMethods, setDeliveryMethods] = useState([])
 
   useEffect(() => {
     // Fetch products when the component mounts
     const getProducts = async () => {
       const products = await fetchProductsList();
-      // Transform products to the format needed for the Select component
       setProductsListNew(products);
+
+      const deliveries = await getDeliveryMethods()
+      setDeliveryMethods(deliveries)
     };
     getProducts()
   }, []);
 
-  const ProductsOptions = ProductsTypes
-    .filter((option) => option.value !== "")
-    .map((product) => ({
-      label: product.label,
-      value: product.value,
-    }));
 
   const DestinationOptions = destinationList
       .filter((option) => option.value !== "")
@@ -62,15 +60,17 @@ const AddOrderPage = () => {
         value: place.value,
       }));
 
-  const measurmentsOptions = measurementTypes
-      .filter((option) => option.value !== "")
-      .map((volume) => ({
-        label: volume.label,
-        value: volume.value,
-      }));
-  const handleProductChange = (selectedOptions) => {
-    // selectedOptions will be an array of { label, value } objects
+
+  const handleProductChange = async (selectedOptions) => {
     setSelectedProduct(selectedOptions || []);
+    const productMeasurements = await getProductMeasures(selectedOptions.value)
+    const measurements = productMeasurements
+        .map((volume) => ({
+          label: volume.type,
+          value: volume._id,
+        }));
+    setMeasurementOptions(measurements)
+
   };
   const handleDestinationChange = (selectedOptions) => {
     // selectedOptions will be an array of { label, value } objects
@@ -83,20 +83,17 @@ const AddOrderPage = () => {
     event.preventDefault();
 
     const formData = new FormData(event.target);
-    // Manually append each measurement to the FormData
-    formData.append('measurement[type]', measurements.type ? measurements.type.value : '');
-    formData.append('measurement[quantity]', measurements.quantity);
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
+// Convert the entire measurements object into a JSON string
+//     const measurementsJson = JSON.stringify({
+//       type: measurements.type.label ? measurements.type.label : '',
+//       quantity: measurements.quantity,
+//     });
+    formData.append('measurementType', measurements.type.label ? measurements.type.label : '');
+    formData.append('quantity', measurements.quantity);
 
-    // const status = await addProduct(formData);
-    // if (status.status) {
-    //   // revalidatePath("/dashboard/products");
-    //   redirect("/dashboard/products");
-    // } else {
-    //   console.log("Something went wrong try again later");
-    // }
+    console.log(formData.get('deliveryMethod'))
+  const status = await addOrder(formData)
+    console.log({status})
   };
 
   return (
@@ -109,7 +106,7 @@ const AddOrderPage = () => {
               theme={selectTheme}
               styles={selectStyle}
               className={styles.formElement} // Apply your styling
-              options={ProductsOptions}
+              options={productsListNew}
               onChange={handleProductChange}
               value={selectedProduct}
               placeholder="Select Product"
@@ -122,7 +119,7 @@ const AddOrderPage = () => {
                 name="deliveryMethod"
                 id="deliveryMethod"
                 className={`${styles.formElement}`} // Apply your styling
-                options={DestinationOptions}
+                options={deliveryMethods}
                 onChange={handleDestinationChange}
                 value={selectedDestination}
                 placeholder="Select Destination"
@@ -136,7 +133,7 @@ const AddOrderPage = () => {
                   styles={selectStyle}
                   className="w-1/2 mr-5"
                   value={measurements.type}
-                  options={measurmentsOptions}
+                  options={measurementOptions}
                   onChange={(selectedOption) =>
                       setMeasurements({ ...measurements, type: selectedOption })
                   }

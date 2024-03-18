@@ -122,20 +122,15 @@ export const fetchProductsList = async () => {
 export const addProduct = async (formData) => {
   try {
     connectToDB();
-    // Handle the image upload first and get the URL/path
-    // The logic here depends on how you implement image storage
     let imgPath = ''
 
     if (formData.get('image')) {
       try {
         imgPath = await uploadImageDirectly(formData.get('image'));
-        // Now you have the image URL, proceed with the rest of your form processing
       } catch (error) {
         console.error('Upload failed:', error);
       }
     }
-    console.log(JSON.parse(formData.get('measurements')))
-    console.log(formData.get('measurements'))
     const newProduct = new Product({
       title: formData.get('title'),
       category: formData.get('category'),
@@ -266,27 +261,128 @@ export const addStock = async (formData) => {
   try {
     connectToDB();
     const stockMeasure = JSON.parse(formData.get('stockMeasure'));
+    const newStockMeasure = await unifyMeasurementUnits(formData.get('product'),stockMeasure.type, stockMeasure.quantity)
     console.log(stockMeasure)
 
-    const newCategory = new Stock({
+    const newStock = new Stock({
       supplier: formData.get('supplier'),
       product: formData.get('product'),
-      stockMeasure: stockMeasure,
+      stockMeasure: newStockMeasure,
       totalPrice: formData.get('totalPrice'),
       expiryDate:formData.get('expiryDate'),
       desc: formData.get('desc'),
-
     });
-    console.log(newCategory)
-    await newCategory.save();
+    console.log(newStock)
+    await newStock.save();
 
     return {status:true, msg:"success"}
   } catch (err) {
     await logError(err);
     return {status:false, msg:err}
-    // throw new Error("Failed to create product!");
   }
 };
+
+async function unifyMeasurementUnits(productId, measurementType, quantity) {
+  try {
+    const product = await getProduct(productId);
+    if (!product) throw new Error('Product not found');
+    console.log({product})
+
+    const measurement = product.measurements.find(m => m.type === measurementType);
+    if (!measurement) throw new Error('Measurement type not found in product');
+    console.log({measurement})
+
+    let convertedQuantity = quantity;
+
+    // Check if the measurement is primary or needs conversion
+    if (!measurement.isPrimary) {
+      convertedQuantity = quantity / measurement.quantity;
+    }
+    const primaryType = product.measurements.find(m => m.isPrimary);
+
+    return {
+      quantity: convertedQuantity,
+      type: primaryType.type
+    };
+  } catch (err) {
+    console.error('Error in unifyMeasurementUnits:', err);
+    throw err
+  }
+}
+export async function addOrder(formData) {
+  try {
+    const productId = formData.get('product');
+    let quantity = Number(formData.get('quantity'));
+    const measurementType = formData.get('measurementType');
+    const deliveryMethodId = formData.get('deliveryMethod');
+    const desc = formData.get('desc');
+
+    // Convert the requested quantity to the primary unit
+    const convertedRequest = await unifyMeasurementUnits(productId, measurementType, quantity);
+    console.log({convertedRequest})
+
+    // Fetch and sort all stocks for the product by expiryDate
+    const stocks = await Stock.find({ product: productId }).sort('expiryDate');
+    console.log({stocks})
+    let totalAvailable = 0;
+    let orderTotalPrice = 0;
+    const stockAdjustments = [];
+
+    for (const stock of stocks) {
+      let stockQuantity = stock.stockMeasure.quantity;
+      let quantityToAllocate = Math.min(convertedRequest.quantity, stockQuantity);
+
+      if (quantityToAllocate > 0) {
+        const pricePerUnit = stock.totalPrice / stock.stockMeasure.quantity;
+        const stockCost = pricePerUnit * quantityToAllocate;
+        orderTotalPrice += stockCost;
+
+        stockAdjustments.push({
+          stockId: stock._id,
+          quantityRemoved: quantityToAllocate,
+          cost: stockCost
+        });
+
+        convertedRequest.quantity -= quantityToAllocate;
+        if (convertedRequest.quantity <= 0) break;
+      }
+    }
+
+    if (convertedRequest.quantity > 0) {
+      throw new Error('Not enough stock available');
+    }
+
+    const order = new Order({
+      productId,
+      stocks: stockAdjustments.map(sa => ({
+        stockId: sa.stockId,
+        quantityRemoved: sa.quantityRemoved
+      })),
+      totalQuantity: quantity,
+      totalPrice: orderTotalPrice,
+      deliveryMethod: deliveryMethodId,
+      desc
+    });
+
+    await order.save();
+
+    // Update or delete stocks based on adjustments
+    for (const { stockId, quantityRemoved } of stockAdjustments) {
+      const stock = await Stock.findById(stockId);
+      if (stock.stockMeasure.quantity - quantityRemoved <= 0) {
+        await Stock.findByIdAndDelete(stockId);
+      } else {
+        stock.stockMeasure.quantity -= quantityRemoved;
+        await stock.save();
+      }
+    }
+
+    return { success: true, message: 'Order processed successfully', orderId: order._id };
+  } catch (error) {
+    console.error('Error processing order:', error);
+    return { success: false, message: error.message };
+  }
+}
 export const deleteStock = async (formData) => {
   const { id } = Object.fromEntries(formData);
 
@@ -424,6 +520,10 @@ export const getDeliveryMethods = async () =>{
     throw err;
   }
 }
+
+//todo
+// get order
+// add order
 export const deleteOrder = async (formData) => {
   const { id } = Object.fromEntries(formData);
 
